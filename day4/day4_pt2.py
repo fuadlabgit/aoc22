@@ -45,8 +45,6 @@ for line in lines:
 print(score)
 
 
-    
-
 
 
 
