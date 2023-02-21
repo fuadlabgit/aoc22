@@ -1,4 +1,4 @@
-# Day 21 
+# Day 21
 
 input = """
 root: pppw + sjmn
@@ -21,7 +21,7 @@ hmdt: 32
 with open("input.txt","r") as file:
     input = file.read().strip()
 
-    
+
 
 lines = input.split("\n")
 
@@ -33,15 +33,15 @@ class Monkey:
     values = {}
 
     def __init__(self,code,job):
-        
+
         self.code = code # e.g. ljgn
 
-        self.wait_for = []  # wait for 
-        self.report_to = [] # report to 
-        
+        self.wait_for = []  # wait for
+        self.report_to = [] # report to
+
         if job is not None:
             self.assign_job(job)  # (a,b,op)
-        
+
         self.__class__.instances[code] = self
         print("Create monkey", code ," op", job,self.wait_for)
 
@@ -49,30 +49,30 @@ class Monkey:
 
         self.job = job # store job instructions
 
-        if not isinstance(job,int) and job is not None: # modify wait for 
+        if not isinstance(job,int) and job is not None: # modify wait for
             self.wait_for = [self.job[0] , self.job[1]]
-        
+
 
     def check_done(self):
         val_dict = self.__class__.values
         # print(val_dict)
         if len(self.wait_for) == 0: # self.job[0] in val_dict and self.job[1] in val_dict:
-            
+
             #print("        --->", self.code,"is done...")
             #print("\n")
-            
+
             u = val_dict[self.job[0]]
             v = val_dict[self.job[1]]
 
             if self.job[2] == "-":
-                val = u-v 
+                val = u-v
             elif self.job[2] == "+":
                 val = u+v
             elif self.job[2] == "/" :
                 val = u/v
             elif self.job[2] == "*":
-                val = u*v 
-        
+                val = u*v
+
             print( "                    ---> yell ", val)
 
             self.report(val)
@@ -82,7 +82,7 @@ class Monkey:
         print(self.code," report ", val )
 
         self.__class__.values[self.code.strip()] = int(val)
-        
+
         for monkey in self.report_to:
             m = self.__class__.instances[monkey]
             # print("remove %s from %s 's waiting list "%(self.code,m.code))
@@ -93,25 +93,25 @@ class Monkey:
 
 
 for line in lines:
-    
+
     monkey = line.split(":")[0]
     job = line.split(":")[1]
     # print("Line", line,"monkey",monkey,"job",job)
 
     a = None
-    b = None 
-    op = None 
+    b = None
+    op = None
 
     # decide if its an elementary number or a complex calculation
     if len(job.split(" + ")) > 1:
         a = job.split(" + ")[0].strip()
         b = job.split(" + ")[1].strip()
-        op = (a,b,"+") 
+        op = (a,b,"+")
 
     elif len(job.split(" / ")) > 1:
         a = job.split(" / ")[0].strip()
         b = job.split(" / ")[1].strip()
-        op = (a,b,"/") 
+        op = (a,b,"/")
 
     elif len(job.split(" * ")) > 1:
         a = job.split(" * ")[0].strip()
@@ -123,13 +123,13 @@ for line in lines:
         b = job.split(" - ")[1].strip()
         op = (a,b,"-")
 
-    else: 
+    else:
         op = int(job )
-    
+
     for m in [a,b]:
         if m not in Monkey.instances and m is not None:
             new_monkey = Monkey(m,None)
-        
+
     if monkey not in Monkey.instances:
         new_monkey = Monkey(monkey,op)
     else:
@@ -161,14 +161,14 @@ for line in lines:
     job = line.split(":")[1]
 
     a = None
-    b = None 
-    op = None 
+    b = None
+    op = None
 
     # decide if its an elementary number or a complex calculation
     if len(job.split(" + ")) > 1 or  len(job.split(" / ")) > 1 or  len(job.split(" * ")) > 1 or  len(job.split(" - ")) > 1:
-        pass 
-    else: 
-        op = job  # < mistake here? 
+        pass # is a complex calculation
+    else:
+        op = job  # < mistake here?
 
         my_monkey = Monkey.instances[monkey]
-        my_monkey.report(eval(job))
+        my_monkey.report(eval(job)) # <- just eval the integer

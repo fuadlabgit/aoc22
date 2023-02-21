@@ -8,15 +8,27 @@ class Elve:
 
     shift = 0 # rules shifter
     instances = []
-    proposed = defaultdict(lambda: []) # keys are positions, values is list of elves
+    proposed = {} #  defaultdict(lambda: []) # keys are positions, values is list of elves
+    map = np.zeros((10_000,10_000)) # mask map for acceleration of part 2
 
     def __init__(self,pos):
         self.pos = pos # current position of this elve
-        self.__class__.instances.append(self)
 
+        self.__class__.map[int(pos.real),int(pos.imag)] = 1
+        self.__class__.instances.append(self)
 
     def __repr__(self):
         return "<Elve at (%i,%i)>" % (self.pos.real, self.pos.imag)
+
+    def move_pos(self,new_pos):
+        # deactivate old position and activate new position
+        self.__class__.map[int(self.pos.real),int(self.pos.imag)] = 0
+        self.pos = new_pos
+        self.__class__.map[int(new_pos.real),int(new_pos.imag)] = 1
+
+    @classmethod
+    def get_map(cls,pos):
+        return cls.map[int(pos.real),int(pos.imag)]
 
     @classmethod
     def bounding_rect(cls):
@@ -41,13 +53,15 @@ class Elve:
         return len(np.where(final_map == "#")[0]), len(np.where(final_map == ".")[0])
 
     def propose_move(self,new_pos):
+        if new_pos not in self.__class__.proposed:
+            self.__class__.proposed[new_pos] = []
         self.__class__.proposed[new_pos].append(self)
 
     def check_rule(self):
 
         idx = self.__class__.shift
         pos = self.pos
-        other_pos = [elve.pos for elve in self.__class__.instances]
+        # other_pos = [elve.pos for elve in self.__class__.instances]
 
         n = pos + 1j
         s  = pos - 1j
@@ -67,32 +81,26 @@ class Elve:
             3: ([e,ne,se],e,"east")
         }
 
-
         # check if has enough space
-        if all(new_pos not in other_pos for new_pos in [n,s,e,w,ne,se,nw,sw]):
-            print(self,"propose no move")
+        if all(self.__class__.get_map(new_pos)==0 for new_pos in [n,s,e,w,ne,se,nw,sw]):
+            # print(self,"propose no move")
+            pass
 
         else:
             # check if can move
 
-            if all(new_pos not in other_pos for new_pos in rules[idx % len(rules)][0]):
+            if all(self.__class__.get_map(new_pos)==0 for new_pos in rules[idx % len(rules)][0]):
                 self.propose_move(rules[idx % len(rules)][1])
-                print(self,"propose moving", rules[idx % len(rules)][2])
 
-            elif all(new_pos not in other_pos for new_pos in rules[(idx+1) % len(rules)][0]):
+            elif all(self.__class__.get_map(new_pos)==0 for new_pos in rules[(idx+1) % len(rules)][0]):
                 self.propose_move(rules[(idx+1) % len(rules)][1])
-                print(self,"propose moving", rules[(idx+1) % len(rules)][2])
 
-            elif all(new_pos not in other_pos for new_pos in rules[(idx+2) % len(rules)][0]):
+            elif all(self.__class__.get_map(new_pos)==0 for new_pos in rules[(idx+2) % len(rules)][0]):
                 self.propose_move(rules[(idx+2) % len(rules)][1])
-                print(self,"propose moving", rules[(idx+2) % len(rules)][2])
 
-            elif all(new_pos not in other_pos for new_pos in rules[(idx+3) % len(rules)][0]):
+            elif all(self.__class__.get_map(new_pos)==0 for new_pos in rules[(idx+3) % len(rules)][0]):
                 self.propose_move(rules[(idx+3) % len(rules)][1])
-                print(self,"propose moving", rules[(idx+3) % len(rules)][2])
 
-            else:
-                print(self,"propose no move2")
 
 
 map = """
@@ -145,38 +153,35 @@ main program
 """
 Elve.print_map()
 
-for iter_idx in range(10):
+for iter_idx in range(1000):
+
 
     print("round", iter_idx)
 
-
     # first half
     elves = Elve.instances
+
+
     for elve in elves:
         elve.check_rule()
 
     # second half
+    n_moved = 0
     for new_pos,elves in Elve.proposed.items():
         if len(elves) == 1:
             elve = elves[0]
-            elve.pos = new_pos
+            elve.move_pos(new_pos)
 
-    Elve.proposed = defaultdict(lambda: [])
+            n_moved += 1
 
+    print("n moved", n_moved)
+    if n_moved == 0:
+        break;
+
+    Elve.proposed = {} # defaultdict(lambda: [])
 
     # shift order
     Elve.shift += 1
 
-    Elve.print_map()
 
-    print("---------------")
-
-
-positions = [e.pos for e in Elve.instances]
-print(positions)
-
-"""
-evaluate progress
-"""
-n_tiles,n_empty = Elve.print_map()
-print(n_empty)
+print("NO ELVED MOVED IN", iter_idx+1)

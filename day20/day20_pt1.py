@@ -1,6 +1,7 @@
-# Day 20 part 1 
-# groves coordinate 
-import numpy as np 
+# Day 20 part 1
+# groves coordinate
+import numpy as np
+from collections import deque
 
 input = """
 1
@@ -21,184 +22,110 @@ input = [int(i) for i in input]
 
 print("input", input)
 
-x = input 
+x = input
 
 """
-1 ---> 
-2 --- > 
+1 --->
+2 --- >
 3
 -3
 4
 """
 
-order = x.copy()
+# 5962
+# assert len(list(set(x))) == len(list(x)), len(list(x)) - len(list(set(x)))
+# duplicate entries in the input data
 
-class Item:
-    def __init__(self,val,prev,next):
-        self.val = val 
-        self.prev = prev 
-        self.next = next 
+
+class MyVal:
+
+    counter = 0
+    zero = None
+
+    def __init__(self,val):
+        self.val = val
+        self.id_number = self.__class__.counter
+        self.__class__.counter  += 1
+
+        if self.val == 0:
+            self.__class__.zero = self
+
+    def __eq__(self,other):
+        if self.val == other.val and self.id_number == other.id_number:
+            return True
+        return False
+
+    def __add__(self,other):
+        return MyVal(self.val + other.val)
+
     def __repr__(self):
-        # return "<%s| %s |%s>" % (self.prev.val,self.val,self.next.val)
-        return "<%s>" % (self.val)
+        return str(self.val)
 
-class Ring:
-
-    def __init__(self,items):
-        self.items = items 
-        self.first_item = items[0]
-
-    def __repr__(self):
-        return str(self.items)
-
-    def sort(self):
-         
-        
-        current = self.first_item 
-        new_order = [current]
-
-        for i in range(len(self.items)):
-            if current.next != self.first_item:
-                new_order.append(current.next)
-            current = current.next 
-        
-        #print("sort", new_order)
-        self.items = new_order 
-
-    def mix(self,k):
-
-        original_items = self.items.copy()
-        
-        i = 0
-        while i <= k:
-        
-            next_item = original_items[i%len(original_items)]
-
-            #print("mix next:",next_item.val)
-            self.move(next_item)
-            self.sort()
-            # print("             " , self,"\n")
-            i+= 1 
-
-    def move(self,item):
-        # 
-        d = item.val 
-
-        if np.sign(d) == +1:
-            for i in range(d):
-                self.move_right(item)
-        elif np.sign(d) == -1:
-            for i in range(-d):
-                self.move_left(item)
-        # else 0 
+x = [MyVal(xi) for xi in x]
+zero = MyVal.zero
 
 
-    def move_right(self,item):
-        # move item right 
-        # [p] [i] [x] [.] [n]
-        #      |-------^
-        
-        i = item 
-        p = item.prev 
-        x = item.next 
-        n = item.next.next 
+d = deque(x)
+order = list(x).copy()
 
 
-        if item == self.first_item:
-            self.first_item = x 
-            # print("changed first item", x.val)
-            
+def rotate_to_number(o):
+    found = False
+    k = 0
 
-        i.prev = x 
-        i.next = n 
+    print("find", o, "...")
+    while not found:
+        d.rotate()
+        k+= 1
+        if d[0] == o:
+            found = True
 
-        p.next = x 
-        # p.prev does not change
+    print("ok")
+    return k
 
-        x.prev = p 
-        x.next = i 
+def mix(idx=0):
 
-        n.prev = i 
-        # np.next does not change 
+    print("start")
+    for i in range(len(order)):
+        print(i)
 
-    def move_left(self,item):
-        # move item left 
-        # [p] [.] [x] [i] [n]
-        #      ^-------|
+        o = order[idx % len(order)]
+        old_idx = d.index(o)
 
-        i = item 
-        x = item.prev 
-        p = item.prev.prev 
-        n = item.next 
+        if not o == zero:
+            k = rotate_to_number(o)
 
-        if item == self.first_item:
-            self.first_item = n 
+            my_element = d.popleft()
 
-        i.prev = p 
-        i.next = x
-        
-        n.prev = x 
-        # n.next does not cange 
+            d.rotate(-o.val)
+            d.appendleft(my_element)
+            # d.rotate((old_idx + o) % len(order))
 
-        x.next = n 
-        x.prev = i 
+        idx += 1
 
-        p.next = i 
-        #p.prev does not change 
+    print("rotate to zero")
+    rotate_to_number(zero)
+    print("done.")
+    return d[1],idx
 
+n1,idx = mix()
 
-items = [Item(xi,None,None) for xi in x]
+d.rotate(1)
 
+N = -1000
 
-for i,item in enumerate(items):
+d.rotate(N)
+n1 = d[1]
 
-    if i == 0:
-        item.prev = items[-1]
-        item.next = items[i+1]
-    
-    if i == len(items) -1:
-        item.prev = items[i-1]
-        item.next = items[0]
-    
-    else:
-        item.prev = items[i-1]
-        item.next = items[i+1]
+d.rotate(N)
+n2 = d[1]
 
-print("initial arrangement", items)
+d.rotate(N)
+n3 = d[1]
 
-ring = Ring(items)
-first_item = items[0]
+print(n1)
+print(n2)
+print(n3)
 
-ring.mix(6)
-print(ring)
-val1 = first_item.next.val
-
-
-"""
-HINT what is the '1000th' number after zero ?
-
-Initial arrangement:
-1, 2, -3, 3, -2, 0, 4               <<<< HERE IT IS 4 ?
-
-1 moves between 2 and -3:
-2, 1, -3, 3, -2, 0, 4
-
-2 moves between -3 and 3:
-1, -3, 2, 3, -2, 0, 4
-
--3 moves between -2 and 0:
-1, 2, 3, -2, -3, 0, 4
-
-3 moves between 0 and 4:
-1, 2, -2, -3, 0, 3, 4                     <<<<< HERE IT IS 3  ?
-
--2 moves between 4 and 1:
-1, 2, -3, 0, 3, 4, -2
-
-0 does not move:
-1, 2, -3, 0, 3, 4, -2
-
-4 moves between -3 and 0:
-1, 2, -3, 4, 0, 3, -2
-
-"""
+print("---------")
+print(n1 + n2 + n3)

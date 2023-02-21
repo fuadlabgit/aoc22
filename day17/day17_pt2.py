@@ -1,6 +1,7 @@
 # Day 17 part 1
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 # example input
 jet = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"
@@ -10,6 +11,71 @@ with open("input.txt","r") as file:
     jet = file.read()
 
 
+"""
+Idea of day 2 is to use a cached data array for cavedata /
+we cannot save 1000000000000 rows of rocks.
+
+--> delete the part which is full
+"""
+
+class LargeData:
+
+    def __init__(self,cave):
+        self.data = np.zeros((7,400_000))
+        self.scroll_ptr = 0 # scroll pointer = vertical offset
+        self.cave = cave
+
+    def __getitem__(self,k):
+        """
+        retreive some of the large data entries
+        """
+
+        k = (k[0], k[1] - self.scroll_ptr)
+        return self.data[k]
+
+    def __setitem__(self,k,v):
+        """
+        modify some of the large data
+        """
+
+        k = (k[0], k[1] - self.scroll_ptr)
+        self.data[k] = v
+
+    def plot(self,k=0):
+        plt.figure()
+        plt.imshow(self.data.T,aspect="auto",interpolation="None")
+        plt.axhline(self.scroll_ptr)
+
+        plt.savefig("plots/fig_%i.png" % k )
+        plt.close()
+
+    def shrink(self):
+
+        sp_old = self.scroll_ptr
+
+        check_len = int(0.8*self.data.shape[1]) # < optimize runtime by theckig not all data all the end up
+        N = self.cave.highest_y - sp_old
+        for v in range(1,check_len): #
+            if not 0 in self.data[:,N - v]:
+                self.scroll_ptr = max(self.scroll_ptr, N - v)
+                break
+
+        sp = self.scroll_ptr - sp_old
+        if sp > 0:
+
+            print("shrinking point at", sp)
+
+            N = self.data.shape[1] - sp
+            remaining_data = self.data[:,sp:]
+            fill_zeros = np.zeros((self.data.shape[0], sp))
+
+            # print("remaining_data", remaining_data.shape)
+            # print("fill_zeros", fill_zeros.shape)
+
+            self.data = np.hstack((remaining_data,fill_zeros))
+
+            # print("data shape", self.data.shape)
+
 class Cave:
     # the whole cave
 
@@ -18,7 +84,7 @@ class Cave:
         self.jet = list((jet_info))
         self.jet_iter = 0
 
-        self.cavedata = np.zeros((7,4*2020)) # might be too small or become too large?
+        self.cavedata = LargeData(self) # might be too small or become too large?
         # self.cavedata[4,2] = 1  <- test
 
         self.highest_y = 0
@@ -104,6 +170,8 @@ class Cave:
 
         cavestr += "    + - - - - - - -+"
         print(cavestr)
+
+
 
 class Rock:
 
@@ -217,19 +285,90 @@ class Rock:
 
         return iters
 
-if __name__ == "__main__":
-    cave = Cave(jet)
-    max_i = np.inf
-    iters = 0
 
-    for k in range(2022):
-        new_rock = Rock(k%5,cave)
-        # print("new rock", new_rock.x,new_rock.y)
-        iters = new_rock.fall_all_way(iters)
-        # cave.print()
+# 1. test large data
+cave = Cave(jet)
+max_i = np.inf
+iters = 0
 
-        if iters >= max_i:
+y_vals = [0]
+
+for k in range(20_000):
+    new_rock = Rock(k%5,cave)
+    # print("new rock", new_rock.x,new_rock.y)
+    iters = new_rock.fall_all_way(iters)
+    # cave.print()
+
+    if iters >= max_i:
+        break
+
+    #if k % 10 == 0:
+    #    # cave.cavedata.plot(k)
+    #    cave.cavedata.shrink()
+
+    y_vals.append(cave.highest_y)
+
+
+"""
+iterating 10000... times is impossible.
+however,
+
+- we only have to find the height, not the constellation of the falling bricks
+- we know there is a repeating pattern of bricks falling down
+
+-> is there also a repeating pattern in the height of the tower?
+"""
+
+change = []
+for i in range(1,len(y_vals)):
+    c = (y_vals[i]- y_vals[i-1])
+    change.append(c)
+
+# find pattern
+min_len = 200
+max_len = 5000
+found = False
+for shift in range(min_len):
+
+    for n in range(min_len,max_len):
+        a = change[shift:n+shift]
+        b = change[n+shift:n+n+shift]
+
+        if a== b:
+            print("FOUND")
+            print(a)
+            print("shift", shift, "Len(a)", len(a))
+            found = True
             break
 
+    if found:
+        break
 
-    print(cave.highest_y)
+aa =  sum(a)
+
+print("".join([str(i) for i in a]))
+print(a)
+
+print("Lengh of pattern", len(a), "total change", aa, print("shift", shift))
+print("starting value", y_vals[shift])
+
+len_pattern = len(a)
+tot_change = aa
+s = y_vals[shift]
+t = shift
+T =  1_000_000_000_000  # remaining time
+
+iter_skip = (T-t)//len_pattern
+s += tot_change * iter_skip
+t += len_pattern * iter_skip
+
+pattern = a
+
+for i in range(T-t):
+    s += pattern[i % len(pattern)]
+    t+= 1
+
+# too low 1529811924773
+#         1539823008825
+
+print(s)
