@@ -1,4 +1,4 @@
-# Day 19 part 1 
+# Day 19 part 1
 
 # obsidian-collecting robots
 # clay = lehm
@@ -6,153 +6,162 @@
 # clay-collecting robots
 # ore-collecting robots = 1
 
-
-"""
-IDEA:
-
-Always look where the bottleneck is... 
-
-
-"""
-
-
 import re
-import numpy as np 
+import numpy as np
 
+
+def dfs(state,verbose=False):
+    # search for a better solution
+
+    if state in cache:
+        return cache[state]
+
+    n_ore, n_clay, n_obsidian, n_geode, q_ore, q_clay, q_obsidian, q_geode, time = state
+
+    robots = {"ore": n_ore, "clay": n_clay, "obsidian": n_obsidian, "geode": n_geode}
+    resources = {"ore": q_ore, "clay": q_clay, "obsidian": q_obsidian, "geode": q_geode}
+
+    T = 24
+
+    if time >= T:
+        return q_geode
+
+    maxval = 0 # number of geodes produced
+
+    """
+    simplest solution: build nothing and wait until time is up
+    """
+
+    maxval = resources["geode"] + robots["geode"] * (T-time)
+
+    """
+    Evaluate options
+    """
+
+    for option in ["ore", "clay", "obsidian", "geode"]:
+
+        # make temporary state dicts
+        eval_robots = robots.copy()
+        eval_resources = resources.copy()
+
+        if eval_robots[option] >= maxspend[option] and option != "geode":
+            continue
+
+        # 1. check requirements and wait until met
+        can_build = False
+        eval_time = time
+
+        #print("option", option)
+        success = False
+        while (not can_build) and eval_time < T:
+
+            # can already build?
+            can_build = True
+            for res_type in costs[option].keys():
+                if eval_resources[res_type] < costs[option][res_type]:
+                    can_build = False
+
+            if can_build: # actually spend resources to build
+                for res_type in costs[option].keys():
+                    eval_resources[res_type] -= costs[option][res_type]
+                success = True
+
+            # meanwhile produce resources
+            for k,v in eval_resources.items():
+                eval_resources[k] += eval_robots[k] # each robot produces one unit
+
+            eval_time += 1
+
+        # finally build the new robot
+        if success:
+            # print("  > success")
+            eval_robots[option] += 1
+
+        # define new state
+        n_ore, n_clay, n_obsidian, n_geode = eval_robots.values()
+        q_ore, q_clay, q_obsidian, q_geode = eval_resources.values()
+
+        new_state = (n_ore, n_clay, n_obsidian, n_geode, q_ore, q_clay, q_obsidian, q_geode, eval_time)
+        new_val = dfs(new_state)
+
+        # print("    ", new_val)
+        maxval = max(maxval,new_val)
+
+    cache[state] = maxval
+    return maxval
+
+"""
+read the blueprint
+"""
 
 input = """
 Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
-Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian
+Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.
 """.strip()
 
+with open("input.txt", "r") as file:
+    input = file.read()
 
-class Factory:
+input = input.strip()
 
-    def __init__(self,prodfunc):
-        self.f = prodfunc # blueprint production function 
+lines = input.split("\n")
 
-        self.capacity = {
-            "clay": 0,
-            "ore": 1,
-            "obsidian": 0,
-            "geode": 0,
-            
-        } # production capacity
 
-        self.stock = {
-            "clay": 0,
-            "ore": 0,
-            "obsidian": 0,
-            "geode": 0,
-            None: np.inf,
-        } # stock of resources 
+def info_to_dict(info):
+    m = re.match("Each ore robot costs (.*) ore. Each clay robot costs (.*) ore. Each obsidian robot costs (.*) ore and (.*) clay. Each geode robot costs (.*) ore and (.*) obsidian.",info)
 
-    def produce(self):
-        # spend resources to build more 
-
-        build_order = {
-            "clay": 0 ,
-            "ore": 0 ,
-            "obsidian": 0, 
-            "geode": 0
-        }
-       
-        s = ""
-        for k,v in self.f.items():
-            # print("--->", k,v)
-            if v is not None: 
-
-                have_enough = True 
-
-                for k2,v2 in v.items():
-                    # print("       have enough",k2," for building %s robot?"%k,self.stock[k2],"/",v2)
-                    if self.stock[k2] < v2: # not enough resources?
-                        have_enough = False 
-                # print("    ",have_enough)
-
-                if have_enough:
-                    s = "    Spend "
-                    for k2,v2 in v.items():
-                        self.stock[k2] -= v2
-                        s+= "%s %s, " % (v2,k2)
-                    s+= "    to start building a %s robot" % k + "\n"
-                    build_order[k] += 1
-
-                s+= "\n"
-        
-        # produce 
-        for k in self.capacity.keys():
-            self.stock[k] += self.capacity[k]
-            if self.capacity[k] > 0:
-                s+= "Produce %s %s\n" % (self.capacity[k],k)
-
-        print(s)
-        print("now you have", self.stock)
-
-        # build ordered robots 
-        for k,v in build_order.items():
-            self.capacity[k] += v 
-            if v > 0 :
-                print("    %s robot is now ready. -> one more" % k)
-
-input = input.split("\n")
-print("INPUT LEN",len(input))
-
-factories = []
-
-for blueprint in input:
-    lines = blueprint.split(".")
-
-    prodfunc = {
-        "ore": None ,
-        "clay": None,
-        "obsidian": None,
-        "geode": None,
+    cost_dict = {
+    "ore": {"ore": int(m.group(1))},
+    "clay": {"ore": int(m.group(2))},
+    "obsidian": {"ore": int(m.group(3)), "clay": int(m.group(4))},
+    "geode": {"ore": int(m.group(5)), "obsidian": int(m.group(6))}
     }
 
-    for line in lines[1:]:
+    return cost_dict
 
-        if not line.strip().startswith("Each"):
-            break
+agg_quality_level = 0
 
-        match = re.match("Each (.*) robot costs (.*) (.*) and (.*) (.*)",line.strip())
+for idx_blueprint, line in enumerate(lines):
 
-        if match is not None:
-            which = match.group(1)
+    robots = {
+        "ore": 1,
+        "clay": 0 ,
+        "obsidian": 0 ,
+        "geode": 0
+    }
 
-            a = (match.group(3))
-            pa =  int(match.group(2))
-            b =  (match.group(5))
-            pb = int(match.group(4))
-            
-        else:
+    resources = {
+        "ore": 0,
+        "clay": 0 ,
+        "obsidian": 0 ,
+        "geode": 0
+    }
 
-            match = re.match("Each (.*) robot costs (.*) (.*)",line.strip())
-            which = match.group(1)
-
-            a = (match.group(3))
-            pa = int(match.group(2))
-            b =  None # match.group(4)
-            pb =  0 # match.group(5)
-            
-        prodfunc[which] = {a:pa,b:pb}
-
-    print("prodfunc",prodfunc)
-    factories.append(Factory(prodfunc))
+    cache = {}
 
 
-print(factories)
-print("LEN(FACTORIES)",len(factories))
+    print("BLUEPRINT", idx_blueprint)
+    # read new cost
+    info = line.split(": ")[1]
+    costs = info_to_dict(info)
 
-fac = factories[0]
+    # compute number of geodes producable
+    maxspend = {"ore": 0, "clay": 0 , "obsidian": 0, "geode": np.inf}
+    for k,v in costs.items():
+        for r, q in v.items():
+            if r != "geode":
+                maxspend[r]  = max(maxspend[r], q)
 
-print("-----")
-print(fac.f)
-print("-----")
+    print("maxspend", maxspend)
 
-for i in range(24):
-    
-    print("\n")
-    print("======== MINUTE %i ================" % (i+1))
-    fac.produce()
-    print("\n")
+    n_ore,n_clay,n_obsidian,n_geode = robots.values()
+    q_ore,q_clay,q_obsidian,q_geode = resources.values()
+
+    start_state = (n_ore, n_clay, n_obsidian, n_geode, q_ore, q_clay, q_obsidian, q_geode, 0)
+    res = dfs(start_state,verbose=False)
+    print("geodes:", res)
+
+    agg_quality_level += res * (1 + idx_blueprint )
+
+
+print("QUALITY LEVEL", agg_quality_level)

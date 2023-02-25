@@ -8,7 +8,7 @@ import numpy as np
 #    number = numer of tiles to move
 #     letter = turn clockwise(R) ounterclockwise (L)
 
-with open("input.txt", "r") as file:
+with open("example_input.txt", "r") as file:
     input = file.read()
 
 lines = input.split("\n")
@@ -50,28 +50,28 @@ class Map:
         mapstr = "\n".join(["".join(row) for row in map]).strip()
         print(mapstr)
 
-N = 50 # 4 example, 50 puzzle
-cubemap = lines[:4*N]
+N = 4 # 4 example, 50 puzzle
+cubemap = lines[:3*N]
 
 faces = {}
 
-faces[1] =  Map([line[N:2*N] for line in cubemap[N:2*N]])
-faces[2] =  Map([line[N:2*N] for line in cubemap[:N]])
-faces[3] =  Map([line[:N] for line in cubemap[2*N:3*N]])
-faces[4] =  Map([line[N:2*N] for line in cubemap[2*N:3*N]])
-faces[5] =  Map([line[:N] for line in cubemap[3*N:4*N]])
-faces[6] =  Map([line[2*N:3*N] for line in cubemap[:N]])
+faces[1] =  Map([line[2*N:3*N] for line in cubemap[:N]])
+faces[2] =  Map([line[:N] for line in cubemap[N:2*N]])
+faces[3] =  Map([line[N:2*N] for line in cubemap[N:2*N]])
+faces[4] =  Map([line[2*N:3*N] for line in cubemap[N:2*N]])
+faces[5] =  Map([line[2*N:3*N] for line in cubemap[2*N:3*N]])
+faces[6] =  Map([line[3*N:4*N] for line in cubemap[2*N:3*N]])
 
 
 # map the faces and directions to new faces and directions
 # in this rotation map
 movemap = {
-   1: {"^": (2,"^"), ">": (6,"^"), "v": (4,"v"), "<": (3,"v")},
-   2: {"^": (5,">"), ">": (6,">"), "v": (1,"v"), "<": (3,">")},
-   3: {"^": (1,">"), ">": (4,">"), "v": (5,"v"), "<": (2,">")},
-   4: {"^": (1,"^"), ">": (6,"<"), "v": (5,"<"), "<": (3,"<")},
-   5: {"^": (3,"^"), ">": (4,"^"), "v": (6,"v"), "<": (2,"v")},
-   6: {"^": (5,"^"), ">": (4,"<"), "v": (1,"<"), "<": (2,"<")},
+   1: {"^": (2,"v"), ">": (6,"<"), "v": (4,"v"), "<": (3,"v")},
+   2: {"^": (1,"v"), ">": (3,">"), "v": (5,"^"), "<": (6,"^")},
+   3: {"^": (1,">"), ">": (4,">"), "v": (5,">"), "<": (2,"<")},
+   4: {"^": (1,"^"), ">": (6,"v"), "v": (5,"v"), "<": (3,"<")},
+   5: {"^": (4,"^"), ">": (6,">"), "v": (2,"^"), "<": (3,"^")},
+   6: {"^": (4,"<"), ">": (1,"<"), "v": (2,">"), "<": (5,"<")},
 }
 
 rotmap = {
@@ -239,7 +239,7 @@ class Turtle:
         self.map.visualize(self)
 
 
-starting_face = 2
+starting_face = 1
 turtle = Turtle(starting_face,faces)
 
 i = 0
@@ -275,7 +275,7 @@ while i < len(instructions):
 """
 process last move
 """
-n_steps = 40
+n_steps = 5
 turtle.move(n_steps)
 turtle.map.visualize(turtle)
 print(turtle.pos)
@@ -286,12 +286,12 @@ Find out the code by re-constructing the original positon in the map (row and co
 N = turtle.map.N
 
 tile_offsets = {
-    1: (N, N),
-    2: (0, N),
-    3: (2*N, 0),
-    4: (2*N, N),
-    5: (3*N, 0),
-    6: (0, 2*N)
+    1: (0, 2*N),
+    2: (N, 0),
+    3: (N, N),
+    4: (N, 2*N),
+    5: (2*N, 2*N),
+    6: (2*N, 3*N)
 }
 
 idx = turtle.face_idx
